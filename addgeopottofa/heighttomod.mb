@@ -1,0 +1,78 @@
+#PBS -S /bin/bash
+#PBS -N heighttomod
+#PBS -l select=1:ncpus=36:mpiprocs=1
+#PBS -l place=free 
+#PBS -l walltime=600
+#PBS -j oe
+#PBS -o /lustre/home/vhmod/mproj/idir/AROME/heighttomod.mb.log 
+#PBS -q nwp_low
+# MPI, openMP env, etc.
+#-----------------------
+export PSM2_RANKS_PER_CONTEXT=2
+
+export MPI_DSM_CPULIST="0-35:allhosts"
+export MPI_DSM_DISTRIBUTE=1
+export MPI_DSM_VERBOSE=1
+
+export MPI_MEM_ALIGN=128
+export MPI_BUFFER_MAX=2000000
+export MPI_BUFS_PER_PROC=1024
+export MPI_REQUEST_MAX=400000
+
+export MKL_DYNAMIC=FALSE
+export F_UFMTENDIAN=big
+export FORT_BUFFERED=true
+export FORT_BLOCKSIZE=1048576
+
+export OMP_NUM_THREADS=1
+export OMP_DYNAMIC=FALSE
+export KMP_STACKSIZE=500m
+export KMP_MONITOR_STACKSIZE=500m
+export KMP_AFFINITY=disabled
+
+export DR_HOOK=0
+export DR_HOOK_SILENT=1
+export DR_HOOK_IGNORE_SIGNALS=-1
+export EC_PROFILE_HEAP=0
+
+#!/bin/bash
+
+. ~/.bashrc
+set -x
+set -u
+ulimit -a
+
+#My environment
+cd  $PBS_O_WORKDIR
+export NSLOTS=`cat $PBS_NODEFILE | wc -l`
+
+# --- Create working directory
+########################################################################
+export EXEC=/lustre/home/vhmod/mproj/idir/AROME/cy40t1_HEIGHTTOMOD
+export RUNDIR=/lustre/home/vhmod/mproj/idir/AROME/$PBS_JOBID
+export INPUTFILE=/lustre/home/vhmod/mproj/idir/AROME/fa/ICMSHAROM+0004_2019010409
+#########################################################################
+
+[[ ! -d ${RUNDIR} ]] && mkdir -p ${RUNDIR}
+cd ${RUNDIR}
+rm -fr ${RUNDIR:='xxx'}/*
+
+# MPI, openMP env, etc.
+export F_RECLUNIT=BYTE
+
+#rename input file and copy to rundir
+cp $INPUTFILE REFLECTIVITYOBS.fa
+
+stat=0
+mpiexec_mpt -np 1 $EXEC > /lustre/home/vhmod/mproj/idir/AROME/HEIGHTTOMOD.log 2>&1
+stat=$?
+if (( ${stat} /= 0 )) ; then
+  if (( ${stat} /= 137 )) ; then
+    exit 999
+  fi
+fi
+chmod 777 REFLECTIVITYOBS.fa
+mv REFLECTIVITYOBS.fa ../modelwithheight.fa 
+cd ../ 
+rm -r ${RUNDIR:='xxx'}
+exit 0
