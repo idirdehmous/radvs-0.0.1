@@ -1,0 +1,232 @@
+# -*- coding: utf-8 -*-
+"""
+PYTHON MODULE 
+pixe2coord.py : RETRIEVE DATA AND COORDINATES FROM THE decodhdf5.py 
+                MODULE AND CONVERT THESE FROM POLAR TO LAT/LON GRID 
+                WITH CALCULATION OF RADAR PIXELS ELEVATIONS 
+   
+
+__AUTHOR      : IDIR DEHMOUS
+__INSTITUTION : ZAMG  (Zentralanstahlt fuer Meteorologie und Geodynamik),AUSTRIA
+                ONM   (Office National de la Meteorologie ) ,ALGERIA
+__E-MAIL      : eddiedehmous@gmail.com
+
+LAST UPDATE   : 18-12-2018
+
+"""
+
+
+import argparse
+import numpy as np 
+from  math import pi ,sqrt , sin , cos ,asin , acos , atan ,atan2
+import sys , os 
+import warnings as _warnings
+import matplotlib 
+matplotlib.use("Agg")              # Interactive mode off 
+import matplotlib.pyplot as plt
+from matplotlib import ticker
+import h5py
+# Import  non-standard modules  
+import decodehdf5
+import bins_loc
+import vis 
+_warnings.filterwarnings('always', category=DeprecationWarning,
+                         module='matplotlib')
+
+
+
+
+
+re=6371.0*1000.0
+ke=4.0/3.0
+RE= 6371.0*1000.0*4.0/3.0     # Effective earth radius in middle altitude in meter RE=R*4/3
+
+
+
+def Ppi(data ,elangle , site ,filename  , var):
+    """
+    Function to plot PPI 
+    the module vis.py  is copied from  wradlib 
+    by adding some custom modifications 
+    The data are presented on polar (curvilinear r/azimuth ) grid !
+    """
+    # Masking the data with no value (255 in pixel space  -->  99999 in velocity space)
+    fig=plt.figure(figsize=(8,8))
+    data1     = np.ma.array(data)
+    mask_data = np.ma.masked_where(data1 == 99999.0  ,data1)
+    ax, pm    = vis.plot_ppi(mask_data,elangle,site )
+    ylabel    = ax.set_ylabel('[km]')
+    cb        = plt.colorbar(pm, ax=ax , pad=0.1)
+    tick_locator = ticker.MaxNLocator(nbins=8)
+    cb.locator   = tick_locator
+    cb.update_ticks()
+    cb.set_label('Radial velocity  [m/s]')
+   
+    fname= os.path.basename(filename)
+    plt.title(fname + '\n'+'  Parameter: '+var_name+'    ,Elevation : '+str(elangle)+' deg', fontsize=10)
+    elangle= '%.2f' % elangle
+    plt.savefig(var_name+'_'+str(elangle)+'.png')
+
+ 
+
+
+def Plot_data(lon , lat , data ,rlat, rlon ,ll_lat,ur_lat,ll_lon,ur_lon ,*imagename):
+    """
+    Small function for plotting ,whether we want to 
+    have graphical plot of the data in lat/lon grid 
+
+    'Under implementation ...! '
+    """ 
+
+    fig = plt.figure(figsize=(13,8))
+    # Set the radar location on the center of the plot  
+    # ll_lat=rlat-6.
+    # ur_lat=rlat+5.
+    # ll_lon=rlon-5.
+    # ur_lon=rlon+10.
+
+#    m = Basemap(projection='cyl',lon_0=rlat,lat_0=rlon,llcrnrlat=ll_lat,
+#               urcrnrlat=ur_lat,llcrnrlon=ll_lon,urcrnrlon=ur_lon,resolution='l')
+#    m.drawcoastlines()
+#    m.drawcountries()
+#    m.drawmapboundary(fill_color='aqua')
+    data1     = np.ma.array(data)
+    mask_data = np.ma.masked_where(data1 == 99999.0  ,data1)
+    plt.rcParams.update({'figure.max_open_warning': 0})
+    cs = plt.pcolormesh(lon,lat,mask_data ,cmap=plt.get_cmap('jet'), vmin =data.min(), vmax = data.max())
+#    plt.scatter(lon , lat , mask_data )
+    plt.savefig(str(imagename[0])+'.png')
+ 
+
+
+
+
+def Vrad_coordinates(fid , dataset):
+
+    # Get the Radar location and height  
+    rlat   =decodehdf5.Radar_info(fid)[0]
+    rlon   =decodehdf5.Radar_info(fid)[1]
+    rheight=decodehdf5.Radar_info(fid)[2]
+    
+    a1gate      = decodehdf5.Get_data_attrib(fid,dataset)[0][0]
+    elangle     = decodehdf5.Get_data_attrib(fid,dataset)[1][0]
+    nbins       = decodehdf5.Get_data_attrib(fid,dataset)[2][0]
+    nrays       = decodehdf5.Get_data_attrib(fid,dataset)[3][0]
+    rscale      = decodehdf5.Get_data_attrib(fid,dataset)[4][0]
+    rstart      = decodehdf5.Get_data_attrib(fid,dataset)[5][0]
+    vals     = decodehdf5.Get_data_attrib(fid,dataset)[6][0]
+    gain     = decodehdf5.Get_data_attrib(fid,dataset)[7][0]
+    nodata   = decodehdf5.Get_data_attrib(fid,dataset)[8][0]
+    offset   = decodehdf5.Get_data_attrib(fid,dataset)[9][0]
+    nodetect = decodehdf5.Get_data_attrib(fid,dataset)[10][0]
+    
+    # Array initalization
+    elev     =elangle *pi/180.0                            # Radar beam elevation in radians 
+    nazimt   =np.empty([nrays])
+    ndist    =np.empty([nbins])
+    lat      =np.empty([nrays,nbins])
+    lon      =np.empty([nrays,nbins])
+    vralt    =np.empty([nrays,nbins])
+    dopp_vel = np.empty([nrays,nbins])
+
+
+    for iray in range(nrays):
+        for jbin in range(nbins):
+    
+            rdist = jbin*rscale                        # Radar-bins distance 
+            ndist[jbin]=rdist
+            azimt = (iray *360./nrays)*pi/180.         # Azimuth of a ray 
+            nazimt[iray]=azimt
+            vralt[iray,jbin]   = sqrt (rdist**2 + RE**2+  2.0*rdist* RE* sin(elev))-RE  # Altitude of each bin 
+            rgdist  = RE *atan(rdist*cos(elev)/(RE + rdist * sin(elev)))  # Radar-bins distance on ground
+            lat[iray,jbin]  = asin(sin(rlat*pi/180.)*cos(rgdist/re)+cos(rlat*pi/180.)*sin(rgdist/re)*cos(azimt))*180./pi 
+            lon[iray,jbin]  = rlon + atan2(sin(azimt)*sin(rgdist/re)*cos(rlat*pi/180.) ,
+                               cos(rgdist/re)-sin(rlat*pi/180.)*sin(lat[iray,jbin]*pi/180.))*180./pi
+    
+    # Compute the real radial velocity wind speed and  
+    # set a  99999.0 flag for no-data (255) 
+    for iray in range(nrays):
+        for jbin in range(nbins):        
+            if vals[iray,jbin] < 255:
+               dopp_vel[iray,jbin] = vals[iray,jbin]*gain + offset    
+            else:
+               dopp_vel[iray,jbin] = 99999.0
+  
+    return elangle ,nazimt ,ndist,  nodetect,  lon, lat, vralt, dopp_vel
+ 
+
+
+
+
+
+if __name__=='__main__':
+
+ 
+   parser = argparse.ArgumentParser(argparse.RawTextHelpFormatter) 
+   parser.add_argument('-f'  ,"--file"      , help='input filename in hdf5 format'   , required=False)
+   parser.add_argument('-n','--dataset', metavar='N', type=int, nargs='+', help='index of the dataset to be decoded sparated by spaces example: 1 2 3 4 5 6 .... ')
+ 
+   args   = parser.parse_args()
+   if args.file == None and args.dataset==None:
+      print '      '
+      print 'pixe2coord.py is used as main program. Requieres input arguments  !'
+      print '      '
+
+
+
+   filename=args.file
+   if args.file == None:
+      print (parser.print_help())
+      sys.exit(1)
+   
+   fid = h5py.File(filename, 'r')
+   
+
+   # Get the informations about the Radar
+   rlat     =decodehdf5.Radar_info(fid)[0]
+   rlon     =decodehdf5.Radar_info(fid)[1]
+   rheight  =decodehdf5.Radar_info(fid)[2]
+   wmoid    =decodehdf5.Radar_info(fid)[3]
+   node     =decodehdf5.Radar_info(fid)[4]
+   nscans   =decodehdf5.Scan_nr(fid)
+   site=(rlat,rlon,rheight)
+
+   print '-'*50
+   print ' '*50 
+   print 'RADAR FILE GLOBAL INFORMATIONS  '
+   print '-'*50
+   print 'Decoding hdf5 file ...   ' ,filename
+   print 'Radar name              :' ,wmoid , '   ' , node
+   print 'Radar position  , Lat   :' ,rlat ,'Lon  :' ,rlon
+   print 'Number of scans in file :' ,nscans
+   print 'Radar station height    :' ,rheight ,' m'
+   print ' '*50
+
+   dset=[]
+   if args.dataset == None:
+      print (parser.print_help())
+      sys.exit(2)
+   else:
+      dset=args.dataset
+
+   for i in dset:
+       if i == 0:
+          print 'Dataset index must be greater than  0 \ndataset0 doesn\' t exist . Check your dataset index sequence!'
+          sys.exit(3)
+       else:
+          dataset = '/dataset%d' %  i
+          elangle =  decodehdf5.Get_data_attrib(fid,dataset)[1][0]
+          var_name =decodehdf5.Get_data_attrib(fid,dataset)[11]
+          elev    =  elangle *pi/180.0
+          print 'Dataset %s ' %i , 'Elevation angle :' ,elangle , ' deg'
+
+   # elangle , nodetect,  lon, lat, vralt, dopp_vel=Vrad_coordinates(dataset)
+   # Functions to call whether we want to visualise the data
+   # plotting using Plot_data function
+   # Plot_data(lon , lat , data ,rlat, rlon ,ll_lat,ur_lat,ll_lon,ur_lon ,'VRAD')
+
+   # Calling the Ppi function to plot the Polar Plane Indicator
+   # Ppi (data , elangle , site ,filename, var_name )
+
+
+
