@@ -1,14 +1,9 @@
-#--------------------------------------------------------------------
-# ZAMG (Zentralantstahlt fuer meteorologie und geodynamik) (Austria)
-# ONM  (Office national de la meteorologie)  (Algeria)          
-#
-# __AUTHOR      : IDIR DEHMOUS   
-#     
-# __E-MAIL      : idirdehmous@gmail.com
-
-# Last update  : Vienna , 20-12-2018 
-
-#-------------------------------------------------------------------
+--------------------------------------------------------------------
+ ZAMG (Zentralantstahlt fuer meteorologie und geodynamik) (Austria)
+ ONM  (Office national de la meteorologie)  (Algeria)          
+  __AUTHOR      : IDIR DEHMOUS        
+  __E-MAIL      : idirdehmous@gmail.com
+  Last update  : Vienna , 20-12-2018 
 
 
 This folder contains a first version of RadVS 
@@ -60,9 +55,9 @@ give any suggestions !!!
 
 
 
-# Dieses model war im december entwickelt , es war 
-# bald weinachtsfest , so 
-# Frohes weinachtenfest fuer alle !!!  
-# ;-) 
+ Dieses model war im december entwickelt , es war 
+ bald weinachtsfest , so 
+ Frohes weinachtenfest fuer alle !!!  
+ ;-) 
          
 --------------------------------------------------------------
