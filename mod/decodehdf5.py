@@ -40,7 +40,7 @@ def Radar_info(fid):
           lat   =fid['/where'].attrs['lat']
           lon   =fid['/where'].attrs['lon']
         if 'what'  in item:
-          source=fid['/what'].attrs['source']
+          source=str(fid['/what'].attrs['source'])
           srce=source.split(',')
           try:
              wmoid=srce[0]
@@ -152,7 +152,7 @@ def Get_subgroup_attrib(fid , dataset):
           eddate.append(groupid[wt_att].attrs["enddate"])
           edtime.append(groupid[wt_att].attrs["endtime"])
        elif len(list(groupid.keys())) == 0:
-          print 'Dataset :', dataset , ' has empty ',wt_att,' attribute' 
+          print ('Dataset :', dataset , ' has empty ',wt_att,' attribute'  )
           pass 
     
            
@@ -172,9 +172,14 @@ def Get_subgroup_attrib(fid , dataset):
     
     if hw_att in groupid.keys():
        if len(groupid[hw_att].attrs.keys()) != 0:
-          rpm.append(groupid[hw_att].attrs["rpm"])
-          plswidth.append(groupid[hw_att].attrs["pulsewidth"])
-          vsamples.append(groupid[hw_att].attrs["Vsamples"])
+          try:
+            rpm.append(groupid[hw_att].attrs["rpm"])
+            plswidth.append(groupid[hw_att].attrs["pulsewidth"])
+            vsamples.append(groupid[hw_att].attrs["Vsamples"])
+          except:
+            KeyError 
+            #print("Key not found in ", groupid[hw_att].attrs )
+            pass 
           
          #  print 'Additional attributes are found in dataset :', dataset
          #  print 'Antenna revolution velocity                :', rpm
@@ -246,9 +251,14 @@ def Get_data_attrib(fid , dataset):
               if 'quantity' in  datagrp['/'+dataset+'/'+grp+'/what'].attrs:
                  param=datagrp['/'+dataset+'/'+grp+'/what'].attrs['quantity']
 
-              dim=datagrp['/'+dataset+'/'+grp+'/data'].value.shape
-              data_vl.append(datagrp['/'+dataset+'/'+grp+'/data'].value)
+              #dim=datagrp['/'+dataset+'/'+grp+'/data'].values.shape
+              dim=datagrp['/'+dataset+'/'+grp+'/data'].shape 
+              
+              #data_vl.append(datagrp['/'+dataset+'/'+grp+'/data'].value)
+              data_vl.append(datagrp['/'+dataset+'/'+grp+'/data'][:])
+              
               param=datagrp['/'+dataset+'/'+grp+'/what'].attrs['quantity']
+
               #print 'data%d' % i ,' found in dataset  :' ,dataset 
               #print 'Parameter found :                :' , param
               #print 'Data dimension                   :' ,dim 
@@ -274,14 +284,14 @@ def Get_data_attrib(fid , dataset):
            datagrp=  fid['/'+dataset+'/'+grp]
            if 'what' in datagrp.keys():
                param=datagrp['/'+dataset+'/'+grp+'/what'].attrs['quantity']
-               if param=='VRAD':     
-                  vrad_name=param
-                  vrad_gain.append(datagrp['/'+dataset+'/'+grp+'/what'].attrs["gain"])
-                  vrad_nodata.append(datagrp['/'+dataset+'/'+grp+'/what'].attrs["nodata"])
-                  vrad_offset.append(datagrp['/'+dataset+'/'+grp+'/what'].attrs["offset"])
-                  vrad_nodetec.append(datagrp['/'+dataset+'/'+grp+'/what'].attrs["undetect"])
-                  vrad_vals.append(datagrp['/'+dataset+'/'+grp+'/data'].value)
-   
+               #if str(param).strip()=='VRAD' or str(param).strip() =='VRADH':     
+               #   print( "found quantity  " , param ) 
+               vrad_name=param
+               vrad_gain.append(datagrp['/'+dataset+'/'+grp+'/what'].attrs["gain"])
+               vrad_nodata.append(datagrp['/'+dataset+'/'+grp+'/what'].attrs["nodata"])
+               vrad_offset.append(datagrp['/'+dataset+'/'+grp+'/what'].attrs["offset"])
+               vrad_nodetec.append(datagrp['/'+dataset+'/'+grp+'/what'].attrs["undetect"])
+               vrad_vals.append(datagrp['/'+dataset+'/'+grp+'/data'][:])
     return  a1gate , elangle , nbins , nrays , rscale , rstart ,vrad_vals, vrad_gain , vrad_nodata, vrad_offset ,vrad_nodetec,vrad_name  
 
 
