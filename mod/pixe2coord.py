@@ -29,7 +29,7 @@ import h5py
 # Import  non-standard modules  
 import decodehdf5
 import bins_loc
-import vis 
+#import vis 
 _warnings.filterwarnings('always', category=DeprecationWarning,
                          module='matplotlib')
 
@@ -114,12 +114,11 @@ def Vrad_coordinates(fid , dataset):
     nrays       = decodehdf5.Get_data_attrib(fid,dataset)[3][0]
     rscale      = decodehdf5.Get_data_attrib(fid,dataset)[4][0]
     rstart      = decodehdf5.Get_data_attrib(fid,dataset)[5][0]
-    vals     = decodehdf5.Get_data_attrib(fid,dataset)[6][0]
-    gain     = decodehdf5.Get_data_attrib(fid,dataset)[7][0]
-    nodata   = decodehdf5.Get_data_attrib(fid,dataset)[8][0]
-    offset   = decodehdf5.Get_data_attrib(fid,dataset)[9][0]
+    vals     = decodehdf5.Get_data_attrib(fid,dataset)[6] [0]
+    gain     = decodehdf5.Get_data_attrib(fid,dataset)[7] [0]
+    nodata   = decodehdf5.Get_data_attrib(fid,dataset)[8] [0]
+    offset   = decodehdf5.Get_data_attrib(fid,dataset)[9] [0]
     nodetect = decodehdf5.Get_data_attrib(fid,dataset)[10][0]
-    
     # Array initalization
     elev     =elangle *pi/180.0                            # Radar beam elevation in radians 
     nazimt   =np.empty([nrays])
@@ -168,9 +167,9 @@ if __name__=='__main__':
  
    args   = parser.parse_args()
    if args.file == None and args.dataset==None:
-      print '      '
-      print 'pixe2coord.py is used as main program. Requieres input arguments  !'
-      print '      '
+      print ('      ')
+      print ('pixe2coord.py is used as main program. Requieres input arguments  !')
+      print ('      ')
 
 
 
@@ -191,16 +190,16 @@ if __name__=='__main__':
    nscans   =decodehdf5.Scan_nr(fid)
    site=(rlat,rlon,rheight)
 
-   print '-'*50
-   print ' '*50 
-   print 'RADAR FILE GLOBAL INFORMATIONS  '
-   print '-'*50
-   print 'Decoding hdf5 file ...   ' ,filename
-   print 'Radar name              :' ,wmoid , '   ' , node
-   print 'Radar position  , Lat   :' ,rlat ,'Lon  :' ,rlon
-   print 'Number of scans in file :' ,nscans
-   print 'Radar station height    :' ,rheight ,' m'
-   print ' '*50
+   print ('-'*50)
+   print (' '*50 )
+   print ('RADAR FILE GLOBAL INFORMATIONS  ')
+   print ('-'*50)
+   print ('Decoding hdf5 file ...   ' ,filename)
+   print ('Radar name              :' ,wmoid , '   ' , node)
+   print ('Radar position  , Lat   :' ,rlat ,'Lon  :' ,rlon)
+   print ('Number of scans in file :' ,nscans)
+   print ('Radar station height    :' ,rheight ,' m')
+   print (' '*50 )
 
    dset=[]
    if args.dataset == None:
@@ -211,14 +210,14 @@ if __name__=='__main__':
 
    for i in dset:
        if i == 0:
-          print 'Dataset index must be greater than  0 \ndataset0 doesn\' t exist . Check your dataset index sequence!'
+          print ('Dataset index must be greater than  0 \ndataset0 doesn\' t exist . Check your dataset index sequence!' )
           sys.exit(3)
        else:
           dataset = '/dataset%d' %  i
           elangle =  decodehdf5.Get_data_attrib(fid,dataset)[1][0]
           var_name =decodehdf5.Get_data_attrib(fid,dataset)[11]
           elev    =  elangle *pi/180.0
-          print 'Dataset %s ' %i , 'Elevation angle :' ,elangle , ' deg'
+          print ('Dataset %s ' %i , 'Elevation angle :' ,elangle , ' deg')
 
    # elangle , nodetect,  lon, lat, vralt, dopp_vel=Vrad_coordinates(dataset)
    # Functions to call whether we want to visualise the data
